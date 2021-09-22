@@ -1,0 +1,242 @@
+---
+title: "Question 2"
+author: "Mohammad Anas"
+output: pdf_document
+---
+
+
+## Summary
+
+The data set provided to us contains the information about 869 pregnant mothers and their biological and behavioral attributes. The variables of interest in this data are the smoke variable, which indicates whether a mother smoked or not and the bwt.oz variable which tell us the weight of the child in ounces at the time of the birth. We will try to address the following questions throughout this report.
+
+1. Do mothers who smoke tend to give birth to children with low weight as compared to mother who dont smoke? If yes, what is the range in difference of birth weight.
+2. Does race(ethnicity) of the mother affect the difference in the birth weight of the child for mother who smoke as compared to mothers who dont smoke.
+3. Lastly, we will try to find if there are any other variables that have an interesting association with the birth weight of child.
+
+We conducted a linear regression analysis to answer the above questions and found out that the mothers who smoke do give birth to children with lower birth weight and the difference was found to be statistically significant. However, the race of mothers did not seem to make any changes to our findings for most races. Mother's height and her weight at pregnancy also seemed to have significant affect on the birth weight.
+
+## Introduction
+
+During our EDA the difference between birth weight for children whose mothers' smoke as compared to those whose mothers' did not smoke was evident. This can be simply seen through the simple box plot shown below.
+
+```{r, fig.height =3, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+smoking <- read.csv("/Users/mohammadanas/Desktop/Duke MIDS/Fall 2021/MODELLING AND REPRESENTATION OF DATA/Assignment 2/smoking.csv",
+                      stringsAsFactors = FALSE, sep = ",",
+                      dec=",")
+
+library(dplyr)
+smoking <-smoking %>%
+    mutate(
+        mother_race = case_when(
+        mrace %in% c(0,1,2,3,4,5) ~ "white",
+        mrace == 6 ~ "mexican",
+        mrace == 7 ~  "black",
+        mrace == 8 ~ "asian",
+        mrace == 9 ~ "mix",
+        TRUE ~ "other"
+        )
+    )
+
+
+smoking <-smoking %>%
+    mutate(
+        mother_educ = case_when(
+        med == 0 ~ "less than 8th grade",
+        med == 1 ~  "8th to 12th",
+        med == 2 ~ "high school but no other schooling",
+        med == 3 ~ "high school + trade school",
+        med == 4 ~ "high school + college",
+        med == 5 ~ "college",
+        med %in% c(6,7) ~ "trade school",
+        TRUE ~ "unknown"
+        )
+    )
+
+smoking <-smoking %>%
+    mutate(
+        income = case_when(
+        inc == 0 ~ "under 2500",
+        inc == 1 ~  "2500 - 4999",
+        inc == 2 ~ "5000 - 7499",
+        inc == 3 ~ "7500 - 9999",
+        inc == 4 ~ "10000 - 12499",
+        inc == 5 ~ "12500 - 14999",
+        inc == 6 ~ "15000 - 17499",
+        inc == 7 ~ "17500 - 19999",
+        inc == 8 ~ "20000 - 22499",
+        inc == 9 ~ "22500 +",
+        TRUE ~ "unknown/notasked"
+        
+        
+        )
+    )
+
+smoking <-smoking %>%
+    mutate(
+        mother_smoke = case_when(
+        smoke == 0 ~ "never",
+        smoke == 1 ~  "smoke now",
+        smoke == 2 ~ "until preg",
+        smoke == 3 ~ "once did, not now",
+        )
+    )
+
+smoking$smoke <- factor(smoking$smoke)
+smoking$mother_smoke <- factor(smoking$mother_smoke)
+smoking$mother_race <- factor(smoking$mother_race)
+smoking$mother_educ <- factor(smoking$mother_educ)
+smoking$income <- factor(smoking$income)
+smoking$bwt <- smoking$bwt.oz
+smoking$bwt <- as.numeric(smoking$bwt)
+smoking$gestation <- as.numeric(smoking$gestation)
+smoking$parity <- as.numeric(smoking$parity)
+smoking$mage <- as.numeric(smoking$mage)
+smoking$mht <- as.numeric(smoking$mht)
+smoking$mpregwt <- as.numeric(smoking$mpregwt)
+smoking$mpregwtc <- smoking$mpregwt - mean(smoking$mpregwt)
+smoking$mpregwtc_squared <- (smoking$mpregwtc)^2
+smoking$magec <- smoking$mage - mean(smoking$mage)
+smoking$parityc <- smoking$parity - mean(smoking$parity)
+smoking$gestationc <- smoking$gestation - mean(smoking$gestation)
+smoking$log_bwt <- log(smoking$bwt)
+smoking$gestationc_squared <- (smoking$gestationc)^2
+smoking$gestationc_squared <- (smoking$gestationc)^2
+library(ggplot2)
+ggplot(smoking, aes(x = mother_smoke, y = bwt)) + geom_boxplot()
+```
+
+To solidify our results we moved on to regression analysis. Through regression we notice that keeping all else constant, a mother who smokes tend give birth to children whose birth weights are on average 16.21 ounces less as compared to children whose mothers don't smoke. According to our 95%, percent confidence interval, we can see that this difference can range from 3.45 ounces to 28.97 ounce (meaning that we can assert with 95% confidence that the true effect of smoking on the birth weight of the new born baby as compared to not smoking lies between this range). We also notice that mother's weight at pregnancy and mother's height also have a statistically significant affect. We note here in our model that all the interaction terms of the smoker and the race variable are statistically insignificant except Mexican. We note an interesting thing here. As compared to Asian- non smoking mothers the Mexican mothers tend to have healthier babies. This positive affect on child's birth weight is further enhanced for the Mexican mothers who smoke. One reason for these counter intuitive results can be the lack of data for Mexican mothers. The below table shows the confidence intervals of standard estimates of all the variables.
+
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+library(stargazer)
+Nbic <- lm(formula = bwt ~ mother_smoke + mother_race + mpregwtc + mht + mother_smoke:mother_race, data = smoking)
+ci <- confint(Nbic)
+stargazer(ci, type ='latex', title = '95 percent CI of Significant Variables', header = FALSE, digits = 2, no.space = TRUE)
+```
+
+
+
+## Exploratory Data Analysis
+
+We used the smoking.csv data set provided to us. This is a modified version of the babies.csv data set. All the data entries that had any column with a missing value were removed. Therefore, the smoking.csv data set had no missing values. 
+
+During the EDA we found that our dependent variable Birth Weight followed a normal distribution. We also notice that majority of variable have an entirely random relationship with our dependent variable (bwt.oz).  These variables include mother's education and mother's age. The variables parity, mother's height and mother's weight at pregnancy show a somewhat linear trend although there is some randomness included. Therefore, we decided to include them in our model.
+
+Given that we notice randomness when plotting scatter plots for most predictor variables against a response variable, we are unable to decipher any appropriate transformations for our x-variables to fit our model well.
+
+To take into account the interaction effects we looked at several plots. Given our variable of interest is the mother_race and her smoking habits, we explore the trend of the affect of smoking on the birth weight across all races. For all the races, the smoking mothers appear to given birth to lower weight babies.For Mexican mother's our box plot indicated that the median value for birth weight for smoking mothers and non-smoking mothers is nearly the same. Given that we notice something worth exploring here and  as we specifically want to capture whether the affect of smoking on birth weight differs by race, we deliberately include the interaction term of race and smokers in our model. The trend is shown below:
+
+```{r, fig.height =3, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2)
+ggplot(smoking, aes(x=mother_smoke, y=bwt))+ geom_boxplot() + facet_wrap(~mother_race) + ggtitle('Smoke vs BWT across Mother Race ') + theme(plot.title = element_text(hjust = 0.5))
+```
+
+We also explore other interaction terms. Given that our smoking variable is our variable of interest we also explore its interactions with the other variables as well apart from race. We notice that affect of all other variables remains same for both smokers and non smokers. We also explored the interaction of some other variables which made intuitively made sense . This included mother's education and income, mother's education and mother's weight at pregnancy. However, none of these yielded any interesting results. 
+
+## The Model
+
+Based on our results from EDA, we preceded to build a linear regression model where our independent variable was bwt (birth weight) and smoke, mother's height, mother's weight at pregnancy, mother_race, income, interaction for smoker and mother's race were included as predictor variables. Used backward selection in R with BIC (Baysean Information Criteria), we were able to remove variables like race and interaction of smokers and race. Again as we are interested in the race variable and its combined affect with smoking on the birth weight we add those variables back to our model. After backward selection our final model looks like this:
+
+\begin{equation}
+  \begin{split}
+	Birth Weight_{i} = \beta_{0}+\beta_{1}*smoker_{i}+\beta_{2}*race_{i}+\beta_{3}*g   estation_{i}+\beta_{4}*mother height_{i}+\beta_{5}*mpregwt_{i} \\                  +\beta_{6}*smoker_{i}*race_{i}
+	\end{split}
+\end{equation}
+
+
+Given that the continuous variables in our model are not centered, the intercept cannot be interpreted as it does not make intuitive sense. We do not that smoking mothers tend to give birth to children whose birth weight on average is 16.21 ounces lower as compared to non smoking mothers. This variable is also significant as indicated by the small p-value. Holding all else constant, one unit increase in mother's weight at pregnancy can lead to a 0.12 ounces increase in the birth of the new born child. According to our model, height also has a positive affect on birth weight increasing it by 0.93 ounces on average. Both the mother's height and her weight at pregnancy had standard estimates that are statistically significant. All of the standard estimates of ethnicity and their interaction term with smoking are statistically insignificant except Mexican as we have discussed before. We do note that although the R-squared is low for our model,the F test results in a lower p-value.This means that our model is good fit for the data as compared to a model with no independent variable. The F-test would make more sense when we compare our model to a model without the interaction term. The F-test comparing the two models results in a large p-value indicating that as compared to a model with interactions does not fit the data significantly better than a model without interactions. The detailed results of our model are provided on the next page.
+
+```{r,, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+library(xtable)
+options(xtable.comment = FALSE)
+Nbic <- lm(formula = bwt ~ mother_smoke + mother_race + mpregwtc + mht + mother_smoke:mother_race, data = smoking)
+results <- summary(Nbic)
+xtable(Nbic, type ='latex', title = 'Results of Our Model', header = FALSE, digits = 2, no.space = TRUE)
+```
+
+
+We also notice by looking at the QQ Plot and the "Residuals vs Fitted Plots" that the model satisfies the assumption of normality, constant variance in residuals and independence of residuals. However, the normality assumption is not entirely satisfied, but we can allow this much to happen. 
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+plot(Nbic, which = 2)
+```
+
+We see an entirely random pattern for the residuals in the fitted vs residuals graph providing us proof for independence of residuals. Moreover, the residuals are distributed equally around the zero line vertically. Its seems that the model has done well on the equal variance assumptions as well.
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+plot(Nbic, which = 1)
+```
+
+
+The linearity assumption also seems to satisfied when we look at the scatter plots of residuals against our continuous predictor variables, as we note a random distribution of points around the origin. The relevant plots have been included in the Appendix section of the report.
+
+
+In terms of outliers, leverage points and influential points the models seems to do a really good job. As the Cooks Distance for all points is significantly below 0.5, we can safely assume that the model has no influential points. We also notice that the model has a few outliers which are not influential points. However, we chose not to exclude them from our model as they are a part of the real data set and not a result of a human error during the data entry process. The points with leverage greater than 0.014 have been identified as the leverage points. This threshold has been calculated by using the formula below where p is the number of predictors and n is the number of data observations:
+
+\begin{equation}
+Thresh-hold = \frac{2*(p + 1)}{n}
+\end{equation}
+
+We do note that there are few leverage points in the data set but none of these points seem to be influential points. The "Residuals vs Leverage" plot has also been included in our analysis.
+
+To check if our model is faced with the issue of multicollinearity we see calculate the VIF (Variance Inflation Factor) for each of our predictor variables. We do notice a high VIF for our interaction term and our smoking variable. However, this has to happen by default whenever we include interaction terms of dummy variables. As we included two interaction terms for our smoking variable, we do see a high VIF for it. For all the other variables we not that VIF is below 10. 
+
+## Conclusion and Limitations
+
+From our model we can easily note that smoking does have a statistically significant effect on the birth weight of a new born baby regardless of the ethnicity of the mother except "Mexican". For Mexican we note that the standard estimate was significantly significant for the Mexican and smoker variable. Mother's weight at pregnancy and her height also tend to have a statistically significant affect on the child's birth weight. These variable tend to have a positive affect on the birth weight.  
+
+However, there are a few limitations in our model.
+
+
+1. We note that we seem to lack data for our one of our major variable variable of interest and that is race. Most of the data that have is for white and black mothers, but lack numbers for mix (15 data entries), Asian(34 data entries) and Mexican mothers (25 data entries). 
+
+3. Another limitation is that the data set used is just a small subset of the actual data. Many relevant variables like father's biological data was not used.
+Many data entries were deleted as well to remove missing values.
+
+4. Lastly, the adjusted R-squared for the model is really low.
+
+
+
+
+
+
+
+
+
+
+## Appendix
+
+To check for the linearity assumption we plot the residuals of our model against the predictor variables. For most predictors, we note that the data points are scattered randomly around the origin. 
+
+```{r, fig.height = 3, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(smoking, aes(x=mpregwt, y=Nbic$residual))+ geom_point() + ggtitle("Residuals vs Mother Weight at Pregnancy")  + theme(plot.title = element_text(hjust = 0.5))
+ggplot(smoking, aes(x=mht, y=Nbic$residual))+ geom_point() + ggtitle("Residuals vs Mother's Height")  + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Here is the QQ plot of out model to check for normality assumption.
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+plot(Nbic, which = 2)
+```
+
+The residuals allow us to check for the linearity, independence and the constant variance assumption. Provided below is the "Residuals vs Fitted" plot which indicates that the independence and the constant variance assumptions are satisfied. 
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+plot(Nbic, which = 1)
+```
+
+Lastly we used "Leverage vs Standardized Residuals plot" to dedect influential points, leverage points and outliers.
+
+```{r, results= "asis", echo=FALSE, warning=FALSE, message=FALSE}
+plot(Nbic, which = 5)
+```
+
+
+
+
+
+
+
+
